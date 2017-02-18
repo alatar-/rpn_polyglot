@@ -2,40 +2,36 @@ package main
 
 import (
     zmq "github.com/pebbe/zmq4"
+    "strconv"
     "time"
     "fmt"
 )
 
 func main() {
     context, _ := zmq.NewContext()
-    socket, _ := context.NewSocket(zmq.REP)
-    // defer context.Close()
-    defer socket.Close()
-    socket.Bind("tcp://*:5555")
+    
+    //  Socket to receive messages on
+    receiver, _ := context.NewSocket(zmq.PULL)
+    defer receiver.Close()
+    receiver.Connect("tcp://localhost:5557")
+
+    //  Socket to send messages to task sink
+    sender, _ := context.NewSocket(zmq.PUSH)
+    defer sender.Close()
+    sender.Connect("tcp://localhost:5558")
 
     fmt.Println("Server listening...")
-    // Wait for messages
+    //  Process tasks forever
     for {
-        msg, _ := socket.Recv(0)
-        println("Received ", string(msg))
+        msgbytes, _ := receiver.Recv(0)
+        fmt.Printf("%s.\n", string(msgbytes))
 
-        // foo := "Fooo"
-        // socket.Send(foo, 1)
-        // socket.Send(foo, 1)
-        // socket.Send(foo, 1)
-        // socket.Send(foo, 1)
-        // for i := 0; i < 2; i++ {
-            
-        //     // subscribers don't get all messages if publisher is too fast
-        //     // a one microsecond pause may still be too short
-        //     time.Sleep(time.Second)
-        // }
+        //  Do the work
+        msec, _ := strconv.ParseInt(string(msgbytes), 10, 64)
+        time.Sleep(time.Duration(msec) * 1e6)
 
-        // do some fake "work"
-        time.Sleep(time.Microsecond)
+        //  Send results to sink
+        sender.Send(msgbytes, 0)
 
-        // send reply back to client
-        reply := "World"
-        socket.Send(reply, 0)
     }
 }

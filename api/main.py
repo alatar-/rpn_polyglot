@@ -1,32 +1,34 @@
+import sys
 import zmq
-from flask import Flask
+import random
+import time
 
 context = zmq.Context()
-api = Flask(__name__)
+workers = context.socket(zmq.PUSH)
+workers.bind("tcp://*:5557")
 
-socket = context.socket(zmq.REQ)
-socket.connect("tcp://localhost:5555")
-
-
-@api.route('/')
-def hello():
-    socket.send(b"Hello", 0)
-
-    i = 0
-    err = 0
-    while True:
-        try:
-            message = socket.recv(0)
-            i += 1
-            break
-            if str(message) == 'World':
-                break
-            print(message)
-        except:
-            err += 1
-            print("err++")
-    return str(message) + " " + str(err)
+for task_nbr in range(100):
+    workload = random.randint(1, 100)
+    workers.send_string(u'%i' % task_nbr)
+    print("Sending workload %d" % workload)
 
 
-if __name__ == "__main__":
-    api.run(host='0.0.0.0', port=8005, debug=True)
+# Socket to receive messages on
+receiver = context.socket(zmq.PULL)
+receiver.bind("tcp://*:5558")
+
+# Start our clock now
+tstart = time.time()
+
+# Process 100 confirmations
+for task_nbr in range(100):
+    s = receiver.recv()
+    if task_nbr % 10 == 0:
+        sys.stdout.write(':')
+    else:
+        sys.stdout.write('.')
+    sys.stdout.flush()
+
+# Calculate and report duration of batch
+tend = time.time()
+print("Total elapsed time: %d msec" % ((tend-tstart)*1000))
