@@ -1,0 +1,11 @@
+{
+	"ImportPath": "github.com/alatar-/rpn/worker",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/pebbe/zmq4",
+			"Rev": "86a301353efd154593d5c851a092dc21e907a601"
+		}
+	]
+}
