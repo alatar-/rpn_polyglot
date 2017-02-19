@@ -6,49 +6,49 @@ from flask import Flask
 # flask setup
 api = Flask(__name__)
 
-# init threading
+# init local thread data
+# both zmq context and sockets must be local
 data = threading.local()
-lock = threading.Lock()
+
+# threads-shared results
+results = []
 
 
 def sink_thread():
-    print("Sink accessed!")
+    global results
+
+    # Init sink socket
     data.context = zmq.Context()  # new thread – new context
     data.receiver = data.context.socket(zmq.PULL)
-    data.receiver.bind("tcp://*:5568")
+    data.receiver.bind("tcp://*:5558")
+    
+    print("Sink process running!")
     while True:
         result = data.receiver.recv()
-        print(result)
+        results.append(str(result))
 
 
-with lock:
-    print("Inside lock")
-    if globals().get('sink_thread_running', True):
-        global sink_thread_running
-        sink_thread_running = False
-        print("Inside block scope")
+def api_thread():
+    data.context = zmq.Context()
+    data.workers = data.context.socket(zmq.PUSH)
+    data.workers.bind("tcp://*:5557")
 
-        data.context = zmq.Context()  # both zmq context and sockets must be local
-        data.workers = data.context.socket(zmq.PUSH)
-        data.workers.bind("tcp://*:5557")
-        
-        thread = threading.Thread(target=sink_thread)
-        thread.start()
-    else:
-        print("Inside second scope")
-        data.context = zmq.Context()  # both zmq context and sockets must be local
-        data.workers = data.context.socket(zmq.PUSH)
-        data.workers.connect("tcp://localhost:5557")
-
-print("Outside lock")
+    print("API process running!")
+    api.run()
 
 
-@api.route("/", methods=['POST'])
+@api.route("/solve_rpn", methods=['GET'])
 def rpn_solve():
-    workers.send_string("100")
+    data.workers.send_string("100")
     return "sent"
 
 
-@api.route("/", methods=['GET'])
+@api.route("/get_rpn_result", methods=['GET'])
 def rpn_get_result():
-    return "null"
+    return "".join(results)
+
+
+if __name__ == '__main__':
+    thread = threading.Thread(target=sink_thread)
+    thread.start()
+    api_thread()
