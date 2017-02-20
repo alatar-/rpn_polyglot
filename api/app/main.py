@@ -4,11 +4,11 @@ import threading
 import zmq
 from flask import Flask
 
-from app import helpers
-
-
 # flask setup
 api = Flask(__name__)
+
+# threads-shared data
+results = []
 
 # get loggers
 requestsLogger = logging.getLogger("requestsLogger")
@@ -18,13 +18,13 @@ consoleLogger = logging.getLogger("consoleLogger")
 # both zmq context and sockets must be local
 data = threading.local()
 
-# threads-shared data
-results = []
-
 
 def sink_thread():
-    global results
-
+    """
+    Thread responsible for obtaining results
+    from workers, timing the requests and saving
+    the output to `results`.
+    """
     # Init sink socket for getting results from workers
     data.context = zmq.Context()  # new thread – new context
     data.receiver = data.context.socket(zmq.PULL)
@@ -37,6 +37,7 @@ def sink_thread():
 
 
 def api_thread():
+    """Thread providing Flask-based API."""
     # Init socket for pushing input to workers
     data.context = zmq.Context()
     data.workers = data.context.socket(zmq.PUSH)
@@ -48,17 +49,28 @@ def api_thread():
 
 @api.route("/rpn/solve", methods=['GET'])
 def rpn_solve():
+    """
+    Endpoint to send input to RPN workers,
+    stores current timestamp associated with
+    job id for timing purposes.
+
+    Returns 200 OK
+    :rtype <json> (job_id)
+    """
     data.workers.send_string("100")
+    consoleLogger.info("100")
     return "sent"
 
 
 @api.route("/rpn/collect", methods=['GET'])
 def rpn_get_result():
+    """
+    Endpoint for obtaining the results.
+
+    Returns 200 OK (for completed request)
+    :rtype <json>
+
+    Returns 202 Accepted (for uncompleted request)
+    """
+    consoleLogger.info("".join(results))
     return "".join(results)
-
-
-if __name__ == '__main__':
-    helpers.configure_loggers()
-    thread = threading.Thread(target=sink_thread)
-    thread.start()
-    api_thread()
