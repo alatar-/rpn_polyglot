@@ -10,4 +10,9 @@
 - install _godep_ (`go get godep`)
 - install dependencies (`godep restore` in package dir)
 
+## Run
+
+You can run multiple workers at the same time.
+
+	./bin/worker
 

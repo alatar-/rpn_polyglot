@@ -4,6 +4,10 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/irlndts/go-rpn",
+			"Rev": "c0aafbb1f3eae6dd68b7c2a74530618487c448fc"
+		},
+		{
 			"ImportPath": "github.com/pebbe/zmq4",
 			"Rev": "86a301353efd154593d5c851a092dc21e907a601"
 		}
