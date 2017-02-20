@@ -2,7 +2,6 @@ package main
 
 import (
     zmq "github.com/pebbe/zmq4"
-    "strconv"
     "time"
     "fmt"
 )
@@ -24,11 +23,11 @@ func main() {
     //  Process tasks forever
     for {
         msgbytes, _ := receiver.Recv(0)
-        fmt.Printf("%s.\n", string(msgbytes))
 
+        fmt.Println(string(msgbytes))
         //  Do the work
-        msec, _ := strconv.ParseInt(string(msgbytes), 10, 64)
-        time.Sleep(time.Duration(msec) * 1e6)
+        // msec, _ := strconv.ParseInt(string(msgbytes), 10, 64)
+        time.Sleep(time.Duration(1000) * 1e6)
 
         //  Send results to sink
         sender.Send(msgbytes, 0)
