@@ -37,13 +37,12 @@ func main() {
 
         var response bytes.Buffer
         response.WriteString(jobId)
-        response.WriteString("\n")
 
         for i := 0; i < jobNum; i++ {
             rpnResult, _ := rpn.Calc(jobInputs[i])
             rpnResultStr := strconv.FormatFloat(rpnResult, 'f', 10, 64)
-            response.WriteString(rpnResultStr)
             response.WriteString("\n")
+            response.WriteString(rpnResultStr)
 
             fmt.Println("ID", jobId, "|", i, "|", rpnResult)
         }

@@ -13,7 +13,7 @@ def configure_loggers():
     )
 
     requestsFileHandler = logging.FileHandler("./logs/requests.log")
-    requestsFileHandler.setFormatter(logging.Formatter('%(asctime)s: %(message)s'))
+    requestsFileHandler.setFormatter(None)
     requestsFileHandler.setLevel(logging.DEBUG)
     requestsLogger = logging.getLogger("requestsLogger")
     requestsLogger.setLevel(logging.DEBUG)

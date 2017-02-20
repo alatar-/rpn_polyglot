@@ -47,7 +47,7 @@ def sink_thread():
         results[job_id]['output'] = job_output
 
         # log to file
-        requestsLogger.info("output job={}\n{} {:f}".format(job_id, job_output, results[job_id]['time']))
+        requestsLogger.info("JOB {} | OUTPUT\n{:f}\n{}".format(job_id, results[job_id]['time'], job_output))
 
 
 def api_thread():
@@ -78,12 +78,11 @@ def rpn_solve():
     global results
     
     last_job_id += 1
-    requestsLogger.info("input job=%d" % last_job_id)
 
     # process input
     input_rpn_data = request.json['rpn']
     # ... validate the input ...
-    requestsLogger.info(input_rpn_data)
+    requestsLogger.info("JOB {:d} | INPUT\n{}".format(last_job_id, input_rpn_data))
 
     results[last_job_id] = {'time': time.time()}
     thread_data.workers.send_string(
