@@ -4,37 +4,37 @@ import (
     zmq "github.com/pebbe/zmq4"
     rpn "github.com/irlndts/go-rpn"
     "bytes"
-    "fmt"
     "strings"
     "strconv"
     "time"
     "math/rand"
+    "log"
 )
 
 func main() {
     context, _ := zmq.NewContext()
     
-    //  Socket to receive messages on
+    log.Println("Connecting to incoming data socket (PULL)...")
     receiver, _ := context.NewSocket(zmq.PULL)
     defer receiver.Close()
     receiver.Connect("tcp://localhost:5557")
 
-    //  Socket to send messages to task sink
+    log.Println("Connecting to outgoing results [sink] socket (PUSH)...")
     sender, _ := context.NewSocket(zmq.PUSH)
     defer sender.Close()
     sender.Connect("tcp://localhost:5558")
 
-    fmt.Println("Server listening...")
-    //  Process tasks forever
     for {
+        log.Println("Worker ready...")
+
         msgbytes, _ := receiver.Recv(0)
+        log.Println("Received new job, processing...")
 
         msgstr := string(msgbytes)
         req := strings.Split(msgstr, "\n")
-
+        // ... handle request validation ...
         jobId, jobNumStr, jobInputs := req[0], req[1], req[2:]
-        fmt.Println("ID", jobId, "| processing", jobNumStr, "RPNs")
-
+        log.Println("ID", jobId, "| processing", jobNumStr, "RPNs")
         jobNum, _ := strconv.Atoi(jobNumStr)
 
         var response bytes.Buffer
@@ -46,13 +46,12 @@ func main() {
             response.WriteString("\n")
             response.WriteString(rpnResultStr)
 
-            fmt.Println("ID", jobId, "|", i, "|", rpnResult)
+            log.Println("ID", jobId, "|", i, "|", rpnResult)
         }
 
         time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 
-        //  Send results to sink
+        log.Println("Processing finished. Sending output...")
         sender.Send(response.String(), 0)
-
     }
 }
