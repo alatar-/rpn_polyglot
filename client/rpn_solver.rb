@@ -12,8 +12,13 @@ $logger.level = Logger::DEBUG
 
 def collectResponse(jobId)
   while true do
-    response = RestClient.get("#{Host}/rpn/collect/#{jobId}")
-    $logger.debug("Collecting response... Return code: #{response.code}")
+    begin
+      $logger.debug("Collecting response...")
+      response = RestClient.get("#{Host}/rpn/collect/#{jobId}")
+    rescue Errno::ECONNREFUSED => e
+      $logger.error("Connection problems: #{e.message}")
+      return
+    end
 
     case response.code
     when 202
@@ -21,8 +26,8 @@ def collectResponse(jobId)
       sleep(0.1)
     when 200
       $logger.debug("Response collected.")
-      puts JSON.parse(response.body)['result']['time']
-      puts JSON.parse(response.body)['result']['output']
+      puts(JSON.parse(response.body)['result']['time'])
+      puts(JSON.parse(response.body)['result']['output'])
       break
     else
       $logger.error("Undexpected API return code: #{response.code}")
@@ -33,10 +38,15 @@ end
 
 def main
   $logger.debug("Reading input for RPN data...")
-  input = $stdin.readlines
+  input = $stdin.readlines()
 
   $logger.debug("Input ready. Sending RPN job...")
-  response = RestClient.post("#{Host}/rpn/solve", {'rpn' => input.join()}.to_json , {content_type: :json, accept: :json})
+  begin
+    response = RestClient.post("#{Host}/rpn/solve", {'rpn' => input.join()}.to_json , {content_type: :json, accept: :json})
+  rescue Errno::ECONNREFUSED => e
+    $logger.error("Connection problems: #{e.message}")
+    return
+  end
 
   case response.code
   when 200
