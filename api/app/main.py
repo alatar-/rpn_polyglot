@@ -1,14 +1,16 @@
 import logging
 import threading
+import time
 
 import zmq
-from flask import Flask
+from flask import Flask, request, jsonify
 
 # flask setup
 api = Flask(__name__)
 
 # threads-shared data
-results = []
+results = {}  # results obtained from the workers
+job_id = 0  # last request job id
 
 # get loggers
 requestsLogger = logging.getLogger("requestsLogger")
@@ -16,7 +18,7 @@ consoleLogger = logging.getLogger("consoleLogger")
 
 # init local thread data
 # both zmq context and sockets must be local
-data = threading.local()
+thread_data = threading.local()
 
 
 def sink_thread():
@@ -26,28 +28,29 @@ def sink_thread():
     the output to `results`.
     """
     # Init sink socket for getting results from workers
-    data.context = zmq.Context()  # new thread – new context
-    data.receiver = data.context.socket(zmq.PULL)
-    data.receiver.bind("tcp://*:5558")
+    thread_data.context = zmq.Context()  # new thread – new context
+    thread_data.receiver = thread_data.context.socket(zmq.PULL)
+    thread_data.receiver.bind("tcp://*:5558")
     
     consoleLogger.info("Sink process running!")
     while True:
-        result = data.receiver.recv()
-        results.append(str(result))
+        result = thread_data.receiver.recv()
+        consoleLogger.info("Recieved output from worker")
+        # results.append(str(result))
 
 
 def api_thread():
     """Thread providing Flask-based API."""
     # Init socket for pushing input to workers
-    data.context = zmq.Context()
-    data.workers = data.context.socket(zmq.PUSH)
-    data.workers.bind("tcp://*:5557")
+    thread_data.context = zmq.Context()
+    thread_data.workers = thread_data.context.socket(zmq.PUSH)
+    thread_data.workers.bind("tcp://*:5557")
 
     consoleLogger.info("API process running!")
     api.run()
 
 
-@api.route("/rpn/solve", methods=['GET'])
+@api.route("/rpn/solve", methods=['POST'])
 def rpn_solve():
     """
     Endpoint to send input to RPN workers,
@@ -57,9 +60,25 @@ def rpn_solve():
     Returns 200 OK
     :rtype <json> (job_id)
     """
-    data.workers.send_string("100")
-    consoleLogger.info("100")
-    return "sent"
+
+    if 'rpn' not in request.json:
+        return "Wrong request", 400
+    
+    global job_id
+    job_id += 1
+    requestsLogger.info("id %d" % job_id)
+
+    # process input
+    input_rpn_data = request.json['rpn']
+    requestsLogger.info(input_rpn_data)
+
+    results[job_id] = {'start': time.time()}
+    thread_data.workers.send_string(str(job_id) + "\n" + input_rpn_data)
+
+    return jsonify({
+        'message': "RPN solving request has been scheduled. Query for result with provided job id.",
+        'jobId': job_id
+    })
 
 
 @api.route("/rpn/collect", methods=['GET'])
@@ -72,5 +91,4 @@ def rpn_get_result():
 
     Returns 202 Accepted (for uncompleted request)
     """
-    consoleLogger.info("".join(results))
-    return "".join(results)
+    return "test"
