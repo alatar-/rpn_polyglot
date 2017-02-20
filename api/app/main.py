@@ -117,6 +117,6 @@ def rpn_get_result(job_id):
         })
     else:
         return jsonify({
-            'message': "Results are not ready yet.",
+            'message': "Results are not yet ready.",
             'job_id': job_id,
         }), 202

@@ -1,9 +1,28 @@
 require 'json'
 require 'rest-client'
 
-input = {'rpn' => "1\n2 3 +"}.to_json
+input = $stdin.readlines
 
-response = RestClient.post "localhost:5000/rpn/solve", input , {content_type: :json, accept: :json}
+response = RestClient.post "localhost:5000/rpn/solve", {'rpn' => input.join("")}.to_json , {content_type: :json, accept: :json}
 
-puts response.code
-puts response.body
+if response.code != 200
+    puts "Unexpected error"
+else
+    jobId = JSON.parse(response.body)['job_id']
+
+    while true do
+        response = RestClient.get "localhost:5000/rpn/collect/#{jobId}"
+
+        if response.code == 202
+            puts "Response not ready. Retrying..."
+            sleep(0.1)
+            next
+        elsif response.code == 200
+            puts JSON.parse(response.body)['result']['time']
+            puts JSON.parse(response.body)['result']['output']
+            break
+        else
+            puts "Unexpected error."
+        end
+    end
+end

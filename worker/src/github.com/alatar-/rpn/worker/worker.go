@@ -7,6 +7,8 @@ import (
     "fmt"
     "strings"
     "strconv"
+    "time"
+    "math/rand"
 )
 
 func main() {
@@ -46,6 +48,8 @@ func main() {
 
             fmt.Println("ID", jobId, "|", i, "|", rpnResult)
         }
+
+        time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
 
         //  Send results to sink
         sender.Send(response.String(), 0)
